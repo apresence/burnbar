@@ -33,6 +33,7 @@ DEFAULTS = {
     "oauth_expires_at": 0,
     "overlay_x": -1,
     "overlay_y": -1,
+    "overlay_scale": 1.0,
 }
 
 
