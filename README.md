@@ -31,23 +31,22 @@ BurnBar supports two modes:
 
 ## Quick Start
 
-### Requirements
+Download `BurnBar.exe` from the [latest release](https://github.com/apresence/burnbar/releases/latest) and run it. No installation required.
 
-- Python 3.10+
-- Windows 10/11
+On first launch, BurnBar positions itself above the taskbar in the bottom-right corner. Drag it wherever you like -- the position is saved automatically.
 
-### Install and Run
+If you have Claude Code installed, BurnBar auto-imports your OAuth credentials on first launch. Otherwise, right-click the overlay and open Settings to configure.
+
+### Run from Source
+
+Requires Python 3.10+ and Windows 10/11.
 
 ```bash
 pip install -r requirements.txt
 pythonw main.pyw
 ```
 
-Use `pythonw` to run without a console window. Use `python main.pyw` for debug output.
-
-On first launch, BurnBar positions itself above the taskbar in the bottom-right corner. Drag it wherever you like -- the position is saved automatically.
-
-On first launch with OAuth mode, BurnBar auto-imports credentials from Claude Code (`~/.claude/.credentials.json`). If no credentials are found, right-click the overlay and open Settings.
+Use `python main.pyw` instead for console debug output.
 
 ### Configure
 
