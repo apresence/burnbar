@@ -1,6 +1,14 @@
 import json
 import os
+import base64
+import ctypes
+import ctypes.wintypes
+import logging
+import typing as tp  # type: ignore[unusedImport]
+
 from pathlib import Path
+
+logger: logging.Logger = logging.getLogger("burnbar.config")
 
 if os.name == "nt":
     CONFIG_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "BurnBar"
@@ -28,23 +36,96 @@ DEFAULTS = {
 }
 
 
+# Keys that get encrypted with DPAPI before writing to disk
+_SENSITIVE_KEYS: list[str] = ["api_key", "oauth_access_token", "oauth_refresh_token"]
+
+
+class _DataBlob(ctypes.Structure):
+    _fields_: list[tuple[str, tp.Any]] = [  # type: ignore[reportIncompatibleVariableOverride]
+        ("cbData", ctypes.wintypes.DWORD),
+        ("pbData", ctypes.POINTER(ctypes.c_char)),
+    ]
+
+
+_DPAPI_PREFIX: str = "{DPAPI}"
+
+
+def _dpapi_encrypt(plaintext: str) -> str:
+    """Encrypt a string with Windows DPAPI, return prefixed base64 result."""
+    if not plaintext:
+        return ""
+    data: bytes = plaintext.encode("utf-8")
+    blob_in: _DataBlob = _DataBlob(len(data), ctypes.create_string_buffer(data, len(data)))
+    blob_out: _DataBlob = _DataBlob()
+    if not ctypes.windll.crypt32.CryptProtectData(  # type: ignore[union-attr]
+        ctypes.byref(blob_in), None, None, None, None, 0, ctypes.byref(blob_out)
+    ):
+        raise OSError("CryptProtectData failed")
+    encrypted: bytes = ctypes.string_at(blob_out.pbData, blob_out.cbData)
+    ctypes.windll.kernel32.LocalFree(blob_out.pbData)  # type: ignore[union-attr]
+    return _DPAPI_PREFIX + base64.b64encode(encrypted).decode("ascii")
+
+
+def _dpapi_decrypt(value: str) -> str:
+    """Decrypt a DPAPI-prefixed base64 blob back to plaintext."""
+    if not value:
+        return ""
+    b64_cipher: str = value.removeprefix(_DPAPI_PREFIX)
+    data: bytes = base64.b64decode(b64_cipher)
+    blob_in: _DataBlob = _DataBlob(len(data), ctypes.create_string_buffer(data, len(data)))
+    blob_out: _DataBlob = _DataBlob()
+    if not ctypes.windll.crypt32.CryptUnprotectData(  # type: ignore[union-attr]
+        ctypes.byref(blob_in), None, None, None, None, 0, ctypes.byref(blob_out)
+    ):
+        raise OSError("CryptUnprotectData failed")
+    plaintext: bytes = ctypes.string_at(blob_out.pbData, blob_out.cbData)
+    ctypes.windll.kernel32.LocalFree(blob_out.pbData)  # type: ignore[union-attr]
+    return plaintext.decode("utf-8")
+
+
 class Config:
     def __init__(self):
         self._data = dict(DEFAULTS)
         self.load()
 
-    def load(self):
+    def load(self) -> None:
         try:
             if CONFIG_FILE.exists():
                 with open(CONFIG_FILE, "r") as f:
                     self._data.update(json.load(f))
+                # Decrypt encrypted fields; encrypt any plaintext on the spot
+                needs_save: bool = False
+                for key in _SENSITIVE_KEYS:
+                    val: str = self._data.get(key, "")
+                    if not val:
+                        continue
+                    if val.startswith(_DPAPI_PREFIX):
+                        try:
+                            self._data[key] = _dpapi_decrypt(val)
+                        except OSError:
+                            logger.warning("Failed to decrypt %s", key)
+                            self._data[key] = ""
+                    else:
+                        # Plaintext found -- encrypt immediately
+                        needs_save = True
+                if needs_save:
+                    self.save()
         except (json.JSONDecodeError, OSError):
             pass
 
-    def save(self):
+    def save(self) -> None:
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        out: dict[str, tp.Any] = dict(self._data)
+        # Encrypt sensitive fields
+        for key in _SENSITIVE_KEYS:
+            val: str = out.get(key, "")
+            if val:
+                try:
+                    out[key] = _dpapi_encrypt(val)
+                except OSError:
+                    logger.warning("Failed to encrypt %s, storing plaintext", key)
         with open(CONFIG_FILE, "w") as f:
-            json.dump(self._data, f, indent=2)
+            json.dump(out, f, indent=2)
 
     # ---- Auth mode ----
 

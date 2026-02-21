@@ -63,6 +63,7 @@ class UsageOverlay:
         self._queue: queue.Queue[tp.Callable[[], None]] = queue.Queue()
         self._tooltip: tp.Optional[tk.Toplevel] = None
         self._tooltip_after_id: tp.Optional[str] = None
+        self._dragging: bool = False
 
         # Callbacks wired by the app
         self.on_refresh: tp.Optional[tp.Callable[[], None]] = None
@@ -92,6 +93,7 @@ class UsageOverlay:
         # Dragging (left-click)
         self._canvas.bind("<Button-1>", self._on_drag_start)
         self._canvas.bind("<B1-Motion>", self._on_drag_motion)
+        self._canvas.bind("<ButtonRelease-1>", self._on_drag_end)
 
         # Right-click context menu
         self._canvas.bind("<Button-3>", self._on_right_click)
@@ -222,6 +224,8 @@ class UsageOverlay:
 
     def _on_hover_enter(self, event: tk.Event) -> None:  # type: ignore[type-arg]
         """Schedule tooltip after a short delay."""
+        if self._dragging:
+            return
         self._tooltip_after_id = self._root.after(  # type: ignore[union-attr]
             400, self._show_tooltip)
 
@@ -365,8 +369,16 @@ class UsageOverlay:
     # ------------------------------------------------------------------ #
 
     def _on_drag_start(self, event: tk.Event) -> None:  # type: ignore[type-arg]
+        self._dragging = True
+        self._hide_tooltip()
+        if self._tooltip_after_id:
+            self._root.after_cancel(self._tooltip_after_id)  # type: ignore[union-attr]
+            self._tooltip_after_id = None
         self._drag_x = event.x
         self._drag_y = event.y
+
+    def _on_drag_end(self, event: tk.Event) -> None:  # type: ignore[type-arg]
+        self._dragging = False
 
     def _on_drag_motion(self, event: tk.Event) -> None:  # type: ignore[type-arg]
         if not self._root:
