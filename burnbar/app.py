@@ -158,38 +158,43 @@ class BurnBarApp:
             logger.info("Usage: %.1f%% -- %s", pct, self.usage.summary)
             self.last_update = datetime.now().strftime("%I:%M:%S %p").lstrip("0")
 
-            # Determine flash state
-            flash_active: bool = False
-            flash_critical: bool = False
-            critical: int = getattr(self.config, "critical_threshold_pct", 3)
-            if pct <= critical:
-                flash_active = True
-                flash_critical = True
-            elif pct <= (self.config.red_threshold_pct + 0.1):
-                flash_active = True
-
             # Update overlay
             yellow_util: float = 1.0 - (self.config.yellow_threshold_pct / 100.0)
             red_util: float = 1.0 - (self.config.red_threshold_pct / 100.0)
             if isinstance(self.usage, UnifiedUsageInfo):
+                utils: tuple[float, float, float] = self.usage.utilizations
                 resets: tuple[int, int, int] = (
                     self.usage.reset_5h,
                     self.usage.reset_7d,
                     self.usage.reset_7d_sonnet,
                 )
-                self._overlay.schedule_update(
-                    self.usage.utilizations, yellow_util, red_util, resets)
+                self._overlay.schedule_update(utils, yellow_util, red_util, resets)
             else:
                 util: float = 1.0 - (pct / 100.0)
-                self._overlay.schedule_update(
-                    (util, util, util), yellow_util, red_util)
-            self._overlay.schedule_flash(flash_active, flash_critical)
+                utils = (util, util, util)
+                self._overlay.schedule_update(utils, yellow_util, red_util)
+
+            # Determine per-bar flash state
+            critical_pct: int = getattr(self.config, "critical_threshold_pct", 3)
+            red_pct: float = self.config.red_threshold_pct
+            flash_bars: list[bool] = []
+            flash_critical: bool = False
+            for u in utils:
+                remaining: float = (1.0 - u) * 100
+                if remaining <= critical_pct:
+                    flash_bars.append(True)
+                    flash_critical = True
+                elif remaining <= red_pct + 0.1:
+                    flash_bars.append(True)
+                else:
+                    flash_bars.append(False)
+            self._overlay.schedule_flash(flash_bars, flash_critical)
 
         except (ApiError, Exception) as exc:
             logger.error("Refresh failed: %s", exc)
             self.error = str(exc)[:80]
             self.usage = None
-            self._overlay.schedule_flash(False, False)
+            self._overlay.schedule_flash([False, False, False], False)
 
     # ------------------------------------------------------------------ #
     #  Status lines for overlay context menu

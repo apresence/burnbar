@@ -61,8 +61,10 @@ class UsageOverlay:
         self._drag_x: int = 0
         self._drag_y: int = 0
         self._ready: threading.Event = threading.Event()
-        self._flash_active: bool = False
+        self._flash_bars: list[bool] = [False, False, False]
         self._flash_visible: bool = True
+        self._flash_critical: bool = False
+        self._flash_dismissed: list[bool] = [False, False, False]
         self._queue: queue.Queue[tp.Callable[[], None]] = queue.Queue()
         self._tooltip: tp.Optional[tk.Toplevel] = None
         self._tooltip_after_id: tp.Optional[str] = None
@@ -210,12 +212,12 @@ class UsageOverlay:
                 lambda u=utilizations, y=yellow_thresh, r=red_thresh, rs=resets:
                     self._draw(u, y, r, rs))
 
-    def schedule_flash(self, active: bool, critical: bool) -> None:
+    def schedule_flash(self, flash_bars: list[bool], critical: bool) -> None:
         """Thread-safe flash state update."""
         if self._root and self._ready.is_set():
             self._queue.put(
-                lambda a=active, c=critical:
-                    self._set_flash(a, c))
+                lambda fb=list(flash_bars), c=critical:
+                    self._set_flash(fb, c))
 
     def stop(self) -> None:
         """Destroy the overlay window (thread-safe)."""
@@ -244,6 +246,15 @@ class UsageOverlay:
             if lines:
                 menu.add_separator()
 
+        # Dismiss flash option (only when bars are actively flashing)
+        has_active_flash: bool = any(
+            fb and not fd
+            for fb, fd in zip(self._flash_bars, self._flash_dismissed))
+        if has_active_flash:
+            menu.add_command(label="Dismiss Flash",
+                             command=self._menu_dismiss_flash)
+            menu.add_separator()
+
         # Action items
         menu.add_command(label="Refresh Now", command=self._menu_refresh)
         menu.add_command(label="Settings...", command=self._menu_settings)
@@ -268,6 +279,12 @@ class UsageOverlay:
     def _menu_reset_size(self) -> None:
         self._apply_scale(1.0)
         self.config._data["overlay_scale"] = 1.0
+
+    def _menu_dismiss_flash(self) -> None:
+        self._flash_dismissed = [
+            fd or fb for fd, fb in zip(self._flash_dismissed, self._flash_bars)]
+        if self._last_draw:
+            self._draw(*self._last_draw)
 
     def _menu_exit(self) -> None:
         if self.on_exit:
@@ -379,9 +396,12 @@ class UsageOverlay:
             # Bar background
             c.create_rectangle(bar_x0, y0, bar_x1, y1, fill=_BAR_BG, outline="")
 
-            # Bar fill
+            # Bar fill (skip when bar is flash-blinking off)
+            flash_off: bool = (self._flash_bars[i]
+                               and not self._flash_dismissed[i]
+                               and not self._flash_visible)
             fill_w: int = int((bar_x1 - bar_x0) * min(1.0, max(0.0, util)))
-            if fill_w > 0:
+            if fill_w > 0 and not flash_off:
                 color: str = _bar_color(util, yellow_thresh, red_thresh)
                 c.create_rectangle(bar_x0, y0, bar_x0 + fill_w, y1,
                                    fill=color, outline="")
@@ -400,26 +420,34 @@ class UsageOverlay:
     #  Flashing
     # ------------------------------------------------------------------ #
 
-    def _set_flash(self, active: bool, critical: bool) -> None:
+    def _set_flash(self, flash_bars: list[bool], critical: bool) -> None:
         """Update flash state; called on the tk thread."""
-        was_active: bool = self._flash_active
-        self._flash_active = active
+        was_any: bool = any(self._flash_bars)
+        # Clear dismissed state for bars that stopped flashing (usage reset)
+        for i in range(3):
+            if self._flash_bars[i] and not flash_bars[i]:
+                self._flash_dismissed[i] = False
+        self._flash_bars = list(flash_bars)
+        self._flash_critical = critical
+        now_any: bool = any(flash_bars)
 
-        if active and not was_active:
+        if now_any and not was_any:
             interval: int = 500 if critical else 1000
             self._flash_visible = True
             self._flash_tick(interval)
-        elif not active and was_active:
+        elif not now_any and was_any:
             self._flash_visible = True
-            self._root.attributes("-alpha", 0.85)  # type: ignore[union-attr]
+            if self._last_draw:
+                self._draw(*self._last_draw)
 
     def _flash_tick(self, interval: int) -> None:
-        """Toggle visibility via alpha channel."""
-        if not self._flash_active or not self._root:
+        """Toggle bar fill visibility."""
+        if not any(self._flash_bars) or not self._root:
             return
         self._flash_visible = not self._flash_visible
-        alpha: float = 0.85 if self._flash_visible else 0.0
-        self._root.attributes("-alpha", alpha)
+        interval = 500 if self._flash_critical else 1000
+        if self._last_draw:
+            self._draw(*self._last_draw)
         self._root.after(interval, self._flash_tick, interval)
 
     # ------------------------------------------------------------------ #
