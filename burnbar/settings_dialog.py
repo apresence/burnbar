@@ -20,9 +20,10 @@ class SettingsDialog:
     Can be created from any thread -- it spins up its own Tk interpreter.
     """
 
-    def __init__(self, config, on_save=None):
+    def __init__(self, config, on_save=None, parent=None):
         self.config = config
         self.on_save = on_save
+        self._parent = parent
         self.root = None
 
     # ------------------------------------------------------------------ #
@@ -31,7 +32,10 @@ class SettingsDialog:
 
     def show(self):
         logger.debug("Creating settings dialog")
-        self.root = tk.Tk()
+        if self._parent:
+            self.root = tk.Toplevel(self._parent)
+        else:
+            self.root = tk.Tk()
         self.root.title("BurnBar Settings")
         self.root.resizable(False, False)
 
@@ -55,9 +59,14 @@ class SettingsDialog:
         self.root.after(100, lambda: self.root.attributes("-topmost", False))
         self.root.focus_force()
 
-        logger.debug("Entering settings mainloop")
-        self.root.mainloop()
-        logger.debug("Settings mainloop exited")
+        if self._parent:
+            logger.debug("Settings dialog opened as Toplevel")
+            self.root.grab_set()
+            self.root.wait_window()
+        else:
+            logger.debug("Entering settings mainloop")
+            self.root.mainloop()
+        logger.debug("Settings dialog closed")
 
     # ------------------------------------------------------------------ #
     #  UI construction

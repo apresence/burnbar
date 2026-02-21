@@ -240,8 +240,11 @@ class BurnBarApp:
     def _on_settings(self) -> None:
         logger.info("Opening settings dialog")
         dialog: SettingsDialog = SettingsDialog(
-            self.config, on_save=self._on_settings_saved)
-        threading.Thread(target=dialog.show, daemon=True).start()
+            self.config,
+            on_save=self._on_settings_saved,
+            parent=self._overlay.tk_root,
+        )
+        dialog.show()
 
     def _on_settings_saved(self) -> None:
         threading.Thread(target=self._refresh, daemon=True).start()

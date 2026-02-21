@@ -72,6 +72,11 @@ class UsageOverlay:
         self.get_status_lines: tp.Optional[tp.Callable[[], list[str]]] = None
         self.get_tooltip_text: tp.Optional[tp.Callable[[], str]] = None
 
+    @property
+    def tk_root(self) -> tp.Optional[tk.Tk]:
+        """Expose the Tk root for child windows like settings."""
+        return self._root
+
     def _init_window(self) -> None:
         """Create the overlay window and canvas."""
         self._root = tk.Tk()
