@@ -64,6 +64,8 @@ Right-click the overlay > **Settings**:
 
 `%APPDATA%\BurnBar\config.json`
 
+Sensitive values (API key, OAuth tokens) are encrypted at rest using Windows [DPAPI](https://learn.microsoft.com/en-us/windows/win32/api/dpapi/). If you paste a plaintext token into the config file, it will be automatically encrypted the next time BurnBar starts.
+
 ## Build Standalone Executable
 
 ```bash
