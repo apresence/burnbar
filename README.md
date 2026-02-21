@@ -62,7 +62,7 @@ Right-click the overlay > **Settings**:
 
 ## Config File
 
-`%APPDATA%\BurnBar\config.json` (Windows) or `~/.config/burnbar/config.json` (Linux/macOS).
+`%APPDATA%\BurnBar\config.json`
 
 ## Build Standalone Executable
 
