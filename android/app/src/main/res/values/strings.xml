@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BurnBar</string>
+    <string name="notification_channel_name">Usage Monitor</string>
+    <string name="notification_channel_description">Shows Anthropic API rate limit bars</string>
+</resources>
