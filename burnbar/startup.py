@@ -13,17 +13,21 @@ _REG_NAME = "BurnBar"
 def _get_launch_command() -> str:
     """Build the command string to launch BurnBar at login.
 
-    Uses pythonw.exe so no console window appears.
+    When running as a frozen PyInstaller exe, returns the exe path directly.
+    Otherwise uses pythonw.exe so no console window appears.
     """
-    # Find main.pyw relative to the package
-    pkg_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(pkg_dir)
-    main_pyw = os.path.join(project_root, "main.pyw")
+    if getattr(sys, 'frozen', False):
+        return f'"{sys.executable}"'
+
+    # Dev mode: find main.pyw relative to the package
+    pkg_dir: str = os.path.dirname(os.path.abspath(__file__))
+    project_root: str = os.path.dirname(pkg_dir)
+    main_pyw: str = os.path.join(project_root, "main.pyw")
 
     # Prefer pythonw.exe for windowless launch
-    python = sys.executable
+    python: str = sys.executable
     if python.lower().endswith("python.exe"):
-        pythonw = python[:-10] + "pythonw.exe"
+        pythonw: str = python[:-10] + "pythonw.exe"
         if os.path.exists(pythonw):
             python = pythonw
 

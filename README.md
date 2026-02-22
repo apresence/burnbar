@@ -31,7 +31,7 @@ BurnBar supports two modes:
 
 ## Quick Start
 
-Download `BurnBar.exe` from the [latest release](https://github.com/apresence/burnbar/releases/latest) and run it. No installation required.
+Download `BurnBar-Setup.exe` from the [latest release](https://github.com/apresence/burnbar/releases/latest) and run it. Installs to `%LocalAppData%\BurnBar` with a Start Menu shortcut and uninstaller -- no admin rights needed. You can also grab the standalone `BurnBar.exe` if you prefer no installation.
 
 On first launch, BurnBar positions itself above the taskbar in the bottom-right corner. Drag it wherever you like -- the position is saved automatically.
 
@@ -66,13 +66,15 @@ Right-click the overlay > **Settings**:
 
 Sensitive values (API key, OAuth tokens) are encrypted at rest using Windows [DPAPI](https://learn.microsoft.com/en-us/windows/win32/api/dpapi/). If you paste a plaintext token into the config file, it will be automatically encrypted the next time BurnBar starts.
 
-## Build Standalone Executable
+## Build
 
 ```bash
 build.bat
+iscc installer.iss
 ```
 
-Produces `dist\BurnBar.exe` via PyInstaller.
+1. `build.bat` runs PyInstaller and produces `dist\BurnBar.exe`.
+2. `iscc installer.iss` runs [Inno Setup](https://jrsoftware.org/isdl.php) and produces `dist\BurnBar-Setup.exe`.
 
 ## Project Structure
 
@@ -80,6 +82,7 @@ Produces `dist\BurnBar.exe` via PyInstaller.
 main.pyw                 # Entry point
 requirements.txt         # Dependencies
 build.bat                # PyInstaller build script
+installer.iss            # Inno Setup installer script
 burnbar/
     app.py               # Application controller, polling loop, flash logic
     api_client.py        # Anthropic API client (OAuth + API key)
