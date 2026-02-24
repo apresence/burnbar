@@ -25,6 +25,7 @@ log/
 set-token.cmd
 .env
 .env.*
+keystore.properties
 
 # IDE / tools / internal
 .claude/

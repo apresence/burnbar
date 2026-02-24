@@ -4,7 +4,7 @@ Tired of alt-tabbing to claude.ai and mashing refresh to see if you boutta get r
 
 ![BurnBar screenshot](burnbar-screenshot.png)
 
-Always-on-top overlay for Windows that shows your Claude usage at a glance.
+Always-on-top overlay for **Windows** and persistent notification for **Android** that shows your Claude usage at a glance.
 
 ## What It Does
 
@@ -31,11 +31,26 @@ BurnBar supports two modes:
 
 ## Quick Start
 
+### Windows
+
 Download `BurnBar-Setup.exe` from the [latest release](https://github.com/apresence/burnbar/releases/latest) and run it. Installs to `%LocalAppData%\BurnBar` with a Start Menu shortcut and uninstaller -- no admin rights needed. You can also grab the standalone `BurnBar.exe` if you prefer no installation.
 
 On first launch, BurnBar positions itself above the taskbar in the bottom-right corner. Drag it wherever you like -- the position is saved automatically.
 
 If you have Claude Code installed, BurnBar auto-imports your OAuth credentials on first launch. Otherwise, right-click the overlay and open Settings to configure.
+
+### Android
+
+Download `BurnBar.apk` from the [latest release](https://github.com/apresence/burnbar/releases/latest) and sideload it.
+
+#### Sideloading
+
+1. On your Android device, go to **Settings > Apps > Special app access > Install unknown apps** (path varies by manufacturer).
+2. Enable install permission for your browser or file manager.
+3. Download and open `BurnBar.apk` -- tap **Install** when prompted.
+4. If you see "App not verified" / Play Protect warning, tap **Install anyway**. This is normal for apps distributed outside the Play Store.
+
+On first launch, enter your API key or OAuth credentials in Settings. BurnBar runs as a foreground service with a persistent notification showing your three usage bars.
 
 ### Run from Source
 
@@ -68,6 +83,8 @@ Sensitive values (API key, OAuth tokens) are encrypted at rest using Windows [DP
 
 ## Build
 
+### Windows
+
 ```bash
 build.bat
 iscc installer.iss
@@ -75,6 +92,17 @@ iscc installer.iss
 
 1. `build.bat` runs PyInstaller and produces `dist\BurnBar.exe`.
 2. `iscc installer.iss` runs [Inno Setup](https://jrsoftware.org/isdl.php) and produces `dist\BurnBar-Setup.exe`.
+
+### Android
+
+Requires JDK 17 and Android SDK (build-tools 35, platform android-35).
+
+```bash
+cd android
+./gradlew assembleRelease
+```
+
+The signed APK is written to `android/app/build/outputs/apk/release/app-release.apk`.
 
 ## Project Structure
 
