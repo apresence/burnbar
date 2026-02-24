@@ -2,7 +2,13 @@
 
 Tired of alt-tabbing to claude.ai and mashing refresh to see if you boutta get rate limited? Watch it 🔥 burn 🔥 in real-time instead.
 
-![BurnBar screenshot](burnbar-screenshot.png)
+### Windows
+![BurnBar Windows](burnbar-windows-screenshot.png)
+
+### Android
+| Status Bar | Notification |
+|:---:|:---:|
+| ![Status Bar](burnbar-android-status-bar.jpeg) | ![Notification](burnbar-android-notification-card.jpeg) |
 
 Always-on-top overlay for **Windows** and persistent notification for **Android** that shows your Claude usage at a glance.
 
@@ -119,6 +125,20 @@ burnbar/
     settings_dialog.py   # tkinter settings window
     oauth.py             # OAuth 2.0 + PKCE, Claude Code credential import
     startup.py           # Windows auto-start (registry)
+android/
+    app/src/main/java/com/apresence/burnbar/
+        BurnBarApp.kt        # Application class
+        MainActivity.kt      # Launcher activity (Jetpack Compose)
+        service/
+            BurnBarService.kt    # Foreground service, notification bars
+        api/
+            AnthropicApiClient.kt  # API client + OAuth
+            UsageModels.kt         # Rate limit data models
+        data/
+            Preferences.kt    # Encrypted shared preferences
+        ui/
+            SettingsScreen.kt  # Compose settings UI
+            theme/             # Material3 theming
 ```
 
 ## Notes
